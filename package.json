@@ -1,0 +1,48 @@
+{
+    "name": "orator-static-server",
+    "version": "1.0.0",
+    "description": "Static file serving for Orator API servers.",
+    "main": "source/Orator-Static-Server.js",
+    "scripts": {
+        "test": "./node_modules/mocha/bin/_mocha --exit -u tdd -R spec",
+        "coverage": "./node_modules/.bin/nyc --reporter=lcov --reporter=text-lcov ./node_modules/mocha/bin/_mocha -- -u tdd -R spec",
+        "start": "node debug/Harness.js",
+        "tests": "npx mocha -u tdd --exit -R spec --grep"
+    },
+    "mocha": {
+        "diff": true,
+        "extension": [
+            "js"
+        ],
+        "package": "./package.json",
+        "reporter": "spec",
+        "slow": "75",
+        "timeout": "5000",
+        "ui": "tdd",
+        "watch-files": [
+            "source/**/*.js",
+            "test/**/*.js"
+        ],
+        "watch-ignore": [
+            "lib/vendor"
+        ]
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/stevenvelozo/orator-static-server.git"
+    },
+    "author": "steven velozo <steven@velozo.com>",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/stevenvelozo/orator-static-server/issues"
+    },
+    "homepage": "https://github.com/stevenvelozo/orator-static-server#readme",
+    "devDependencies": {
+        "chai": "^4.3.7",
+        "fable": "^3.1.51",
+        "mocha": "^10.2.0",
+        "orator": "^5.0.1",
+        "orator-serviceserver-restify": "^2.0.5",
+        "quackage": "^1.0.45"
+    }
+}
