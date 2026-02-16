@@ -977,31 +977,31 @@ suite
 								let tmpCapturedHeaders = {};
 								let tmpMockResponse = { setHeader: function(pName, pValue) { tmpCapturedHeaders[pName] = pValue; } };
 
-								tmpHarness.orator.setMimeHeader('test.html', tmpMockResponse);
+								tmpHarness.staticServer.setMimeHeader('test.html', tmpMockResponse);
 								Expect(tmpCapturedHeaders['Content-Type']).to.equal('text/html');
 
-								tmpHarness.orator.setMimeHeader('test.css', tmpMockResponse);
+								tmpHarness.staticServer.setMimeHeader('test.css', tmpMockResponse);
 								Expect(tmpCapturedHeaders['Content-Type']).to.equal('text/css');
 
-								tmpHarness.orator.setMimeHeader('test.json', tmpMockResponse);
+								tmpHarness.staticServer.setMimeHeader('test.json', tmpMockResponse);
 								Expect(tmpCapturedHeaders['Content-Type']).to.equal('application/json');
 
-								tmpHarness.orator.setMimeHeader('test.js', tmpMockResponse);
+								tmpHarness.staticServer.setMimeHeader('test.js', tmpMockResponse);
 								Expect(tmpCapturedHeaders['Content-Type']).to.equal('application/javascript');
 
-								tmpHarness.orator.setMimeHeader('test.png', tmpMockResponse);
+								tmpHarness.staticServer.setMimeHeader('test.png', tmpMockResponse);
 								Expect(tmpCapturedHeaders['Content-Type']).to.equal('image/png');
 
-								tmpHarness.orator.setMimeHeader('test.jpg', tmpMockResponse);
+								tmpHarness.staticServer.setMimeHeader('test.jpg', tmpMockResponse);
 								Expect(tmpCapturedHeaders['Content-Type']).to.equal('image/jpeg');
 
-								tmpHarness.orator.setMimeHeader('test.svg', tmpMockResponse);
+								tmpHarness.staticServer.setMimeHeader('test.svg', tmpMockResponse);
 								Expect(tmpCapturedHeaders['Content-Type']).to.equal('image/svg+xml');
 
-								tmpHarness.orator.setMimeHeader('test.pdf', tmpMockResponse);
+								tmpHarness.staticServer.setMimeHeader('test.pdf', tmpMockResponse);
 								Expect(tmpCapturedHeaders['Content-Type']).to.equal('application/pdf');
 
-								tmpHarness.orator.setMimeHeader('test.txt', tmpMockResponse);
+								tmpHarness.staticServer.setMimeHeader('test.txt', tmpMockResponse);
 								Expect(tmpCapturedHeaders['Content-Type']).to.equal('text/plain');
 
 								tmpHarness.orator.log.info('All common MIME types detected correctly');
@@ -1028,10 +1028,10 @@ suite
 								let tmpCapturedHeaders = {};
 								let tmpMockResponse = { setHeader: function(pName, pValue) { tmpCapturedHeaders[pName] = pValue; } };
 
-								tmpHarness.orator.setMimeHeader('mystery.xyz123', tmpMockResponse);
+								tmpHarness.staticServer.setMimeHeader('mystery.xyz123', tmpMockResponse);
 								Expect(tmpCapturedHeaders['Content-Type']).to.equal('application/octet-stream');
 
-								tmpHarness.orator.setMimeHeader('noextension', tmpMockResponse);
+								tmpHarness.staticServer.setMimeHeader('noextension', tmpMockResponse);
 								Expect(tmpCapturedHeaders['Content-Type']).to.equal('application/octet-stream');
 
 								tmpHarness.orator.log.info('Unknown extensions fall back to octet-stream');
@@ -1058,10 +1058,10 @@ suite
 								let tmpCapturedHeaders = {};
 								let tmpMockResponse = { setHeader: function(pName, pValue) { tmpCapturedHeaders[pName] = pValue; } };
 
-								tmpHarness.orator.setMimeHeader('/assets/css/main.css', tmpMockResponse);
+								tmpHarness.staticServer.setMimeHeader('/assets/css/main.css', tmpMockResponse);
 								Expect(tmpCapturedHeaders['Content-Type']).to.equal('text/css');
 
-								tmpHarness.orator.setMimeHeader('/deep/path/image.png', tmpMockResponse);
+								tmpHarness.staticServer.setMimeHeader('/deep/path/image.png', tmpMockResponse);
 								Expect(tmpCapturedHeaders['Content-Type']).to.equal('image/png');
 
 								tmpHarness.orator.log.info('MIME types detected correctly from deep paths');
@@ -1092,21 +1092,317 @@ suite
 						startHarness(tmpHarness,
 							(pError) =>
 							{
-								Expect(tmpHarness.orator.oldLibMime).to.be.a('boolean');
+								Expect(tmpHarness.staticServer.oldLibMime).to.be.a('boolean');
 								let libMime = require('mime');
 								if ('lookup' in libMime)
 								{
-									Expect(tmpHarness.orator.oldLibMime).to.equal(true);
+									Expect(tmpHarness.staticServer.oldLibMime).to.equal(true);
 								}
 								else
 								{
-									Expect(tmpHarness.orator.oldLibMime).to.equal(false);
+									Expect(tmpHarness.staticServer.oldLibMime).to.equal(false);
 								}
-								tmpHarness.orator.log.info(`oldLibMime=${tmpHarness.orator.oldLibMime}`);
+								tmpHarness.orator.log.info(`oldLibMime=${tmpHarness.staticServer.oldLibMime}`);
 								tmpHarness.orator.stopService(
 									() =>
 									{
 										return fDone();
+									});
+							});
+					}
+				);
+			}
+		);
+
+		suite
+		(
+			'Default Route Content-Type Headers',
+			() =>
+			{
+				test
+				(
+					'should serve directory request with text/html content-type for default index.html',
+					(fDone) =>
+					{
+						let tmpPort = getNextTestPort();
+						let tmpHarness = createHarness(tmpPort);
+
+						startHarness(tmpHarness,
+							(pError) =>
+							{
+								tmpHarness.orator.addStaticRoute(_StaticContentPath, 'index.html', '/ct/*', '/ct/');
+
+								makeRequest(tmpPort, '/ct/',
+									(pError, pStatusCode, pHeaders, pBody) =>
+									{
+										Expect(pError).to.equal(null);
+										Expect(pStatusCode).to.equal(200);
+										Expect(pHeaders['content-type']).to.contain('text/html');
+										Expect(pBody).to.contain('Test Index');
+										tmpHarness.orator.log.info(`Directory request content-type: ${pHeaders['content-type']}`);
+										tmpHarness.orator.stopService(
+											() =>
+											{
+												return fDone();
+											});
+									});
+							});
+					}
+				);
+
+				test
+				(
+					'should serve root wildcard route with text/html for default file',
+					(fDone) =>
+					{
+						let tmpPort = getNextTestPort();
+						let tmpHarness = createHarness(tmpPort);
+
+						startHarness(tmpHarness,
+							(pError) =>
+							{
+								tmpHarness.orator.addStaticRoute(_StaticContentPath, 'index.html', '/*', '/');
+
+								makeRequest(tmpPort, '/',
+									(pError, pStatusCode, pHeaders, pBody) =>
+									{
+										Expect(pError).to.equal(null);
+										Expect(pStatusCode).to.equal(200);
+										Expect(pHeaders['content-type']).to.contain('text/html');
+										Expect(pBody).to.contain('Test Index');
+										tmpHarness.orator.log.info(`Root wildcard content-type: ${pHeaders['content-type']}`);
+										tmpHarness.orator.stopService(
+											() =>
+											{
+												return fDone();
+											});
+									});
+							});
+					}
+				);
+
+				test
+				(
+					'should serve explicit file request with correct content-type',
+					(fDone) =>
+					{
+						let tmpPort = getNextTestPort();
+						let tmpHarness = createHarness(tmpPort);
+
+						startHarness(tmpHarness,
+							(pError) =>
+							{
+								tmpHarness.orator.addStaticRoute(_StaticContentPath, 'index.html', '/check/*', '/check/');
+
+								tmpHarness.fable.Utility.waterfall([
+										(fStageComplete) =>
+										{
+											makeRequest(tmpPort, '/check/index.html',
+												(pError, pStatusCode, pHeaders, pBody) =>
+												{
+													Expect(pStatusCode).to.equal(200);
+													Expect(pHeaders['content-type']).to.contain('text/html');
+													tmpHarness.orator.log.info(`Explicit index.html content-type: ${pHeaders['content-type']}`);
+													return fStageComplete();
+												});
+										},
+										(fStageComplete) =>
+										{
+											makeRequest(tmpPort, '/check/style.css',
+												(pError, pStatusCode, pHeaders, pBody) =>
+												{
+													Expect(pStatusCode).to.equal(200);
+													Expect(pHeaders['content-type']).to.contain('text/css');
+													tmpHarness.orator.log.info(`Explicit style.css content-type: ${pHeaders['content-type']}`);
+													return fStageComplete();
+												});
+										},
+										(fStageComplete) =>
+										{
+											makeRequest(tmpPort, '/check/data.json',
+												(pError, pStatusCode, pHeaders, pBody) =>
+												{
+													Expect(pStatusCode).to.equal(200);
+													Expect(pHeaders['content-type']).to.contain('application/json');
+													tmpHarness.orator.log.info(`Explicit data.json content-type: ${pHeaders['content-type']}`);
+													return fStageComplete();
+												});
+										}
+									],
+									(pError) =>
+									{
+										tmpHarness.orator.stopService(
+											() =>
+											{
+												return fDone();
+											});
+									});
+							});
+					}
+				);
+
+				test
+				(
+					'should serve custom default file with correct content-type on directory request',
+					(fDone) =>
+					{
+						let tmpPort = getNextTestPort();
+						let tmpHarness = createHarness(tmpPort);
+
+						startHarness(tmpHarness,
+							(pError) =>
+							{
+								// Use about.html as the default file
+								tmpHarness.orator.addStaticRoute(_StaticContentPath, 'about.html', '/custom/*', '/custom/');
+
+								makeRequest(tmpPort, '/custom/',
+									(pError, pStatusCode, pHeaders, pBody) =>
+									{
+										Expect(pError).to.equal(null);
+										Expect(pStatusCode).to.equal(200);
+										Expect(pHeaders['content-type']).to.contain('text/html');
+										Expect(pBody).to.contain('About page content');
+										tmpHarness.orator.log.info(`Custom default content-type: ${pHeaders['content-type']}`);
+										tmpHarness.orator.stopService(
+											() =>
+											{
+												return fDone();
+											});
+									});
+							});
+					}
+				);
+
+				test
+				(
+					'should serve extensionless URL paths with default file content-type',
+					(fDone) =>
+					{
+						let tmpPort = getNextTestPort();
+						let tmpHarness = createHarness(tmpPort);
+
+						startHarness(tmpHarness,
+							(pError) =>
+							{
+								tmpHarness.orator.addStaticRoute(_StaticContentPath, 'index.html', '/*', '/');
+
+								// Request a path without extension or trailing slash
+								// The MIME detection should use the default file's extension
+								makeRequest(tmpPort, '/somepath',
+									(pError, pStatusCode, pHeaders, pBody) =>
+									{
+										Expect(pError).to.equal(null);
+										// This may be a 404 since /somepath doesn't exist as a file,
+										// but the content-type should still be set based on the default file
+										Expect(pHeaders['content-type']).to.contain('text/html');
+										tmpHarness.orator.log.info(`Extensionless path content-type: ${pHeaders['content-type']}, status: ${pStatusCode}`);
+										tmpHarness.orator.stopService(
+											() =>
+											{
+												return fDone();
+											});
+									});
+							});
+					}
+				);
+			}
+		);
+
+		suite
+		(
+			'addStaticRoute Parameter Defaults',
+			() =>
+			{
+				test
+				(
+					'should use default parameters when optional arguments are omitted',
+					(fDone) =>
+					{
+						let tmpPort = getNextTestPort();
+						let tmpHarness = createHarness(tmpPort);
+
+						startHarness(tmpHarness,
+							(pError) =>
+							{
+								// Call with only the file path -- defaults should fill in
+								let tmpResult = tmpHarness.orator.addStaticRoute(_StaticContentPath);
+								Expect(tmpResult).to.equal(true);
+
+								makeRequest(tmpPort, '/',
+									(pError, pStatusCode, pHeaders, pBody) =>
+									{
+										Expect(pError).to.equal(null);
+										Expect(pStatusCode).to.equal(200);
+										Expect(pHeaders['content-type']).to.contain('text/html');
+										Expect(pBody).to.contain('Test Index');
+										tmpHarness.orator.log.info('Default parameters served root correctly');
+										tmpHarness.orator.stopService(
+											() =>
+											{
+												return fDone();
+											});
+									});
+							});
+					}
+				);
+
+				test
+				(
+					'should use custom default file when provided',
+					(fDone) =>
+					{
+						let tmpPort = getNextTestPort();
+						let tmpHarness = createHarness(tmpPort);
+
+						startHarness(tmpHarness,
+							(pError) =>
+							{
+								let tmpResult = tmpHarness.orator.addStaticRoute(_StaticContentPath, 'about.html');
+								Expect(tmpResult).to.equal(true);
+
+								makeRequest(tmpPort, '/',
+									(pError, pStatusCode, pHeaders, pBody) =>
+									{
+										Expect(pError).to.equal(null);
+										Expect(pStatusCode).to.equal(200);
+										Expect(pBody).to.contain('About page content');
+										tmpHarness.orator.log.info('Custom default file about.html served at root');
+										tmpHarness.orator.stopService(
+											() =>
+											{
+												return fDone();
+											});
+									});
+							});
+					}
+				);
+
+				test
+				(
+					'should serve directory with query string and return correct content-type',
+					(fDone) =>
+					{
+						let tmpPort = getNextTestPort();
+						let tmpHarness = createHarness(tmpPort);
+
+						startHarness(tmpHarness,
+							(pError) =>
+							{
+								tmpHarness.orator.addStaticRoute(_StaticContentPath, 'index.html', '/qsdir/*', '/qsdir/');
+
+								makeRequest(tmpPort, '/qsdir/?v=2.0.0',
+									(pError, pStatusCode, pHeaders, pBody) =>
+									{
+										Expect(pError).to.equal(null);
+										Expect(pStatusCode).to.equal(200);
+										Expect(pHeaders['content-type']).to.contain('text/html');
+										Expect(pBody).to.contain('Test Index');
+										tmpHarness.orator.log.info(`Directory with query string content-type: ${pHeaders['content-type']}`);
+										tmpHarness.orator.stopService(
+											() =>
+											{
+												return fDone();
+											});
 									});
 							});
 					}
