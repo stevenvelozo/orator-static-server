@@ -99,6 +99,14 @@ npx docsify-cli serve docs
 
 ## Related Packages
 
-- [orator](https://github.com/stevenvelozo/orator) - Main Orator service (includes addStaticRoute)
-- [orator-serviceserver-restify](https://github.com/stevenvelozo/orator-serviceserver-restify) - Restify service server
-- [fable](https://github.com/stevenvelozo/fable) - Service provider framework
+- [orator](https://github.com/stevenvelozo/orator) - API server abstraction
+- [orator-serviceserver-restify](https://github.com/stevenvelozo/orator-serviceserver-restify) - Restify service server implementation
+- [fable](https://github.com/stevenvelozo/fable) - Application services framework
+
+## License
+
+MIT
+
+## Contributing
+
+Pull requests are welcome. For details on our code of conduct, contribution process, and testing requirements, see the [Retold Contributing Guide](https://github.com/stevenvelozo/retold/blob/main/docs/contributing.md).
