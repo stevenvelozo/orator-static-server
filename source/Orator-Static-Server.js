@@ -161,15 +161,12 @@ class OratorStaticServer extends libFableServiceProviderBase
 							return pRequest.url;
 					};
 
-					// When the URL is a directory (e.g. '/' or '/docs/'), use the default file for MIME detection
-					// so the browser gets text/html instead of application/octet-stream
-					let tmpMimeTarget = pRequest.url;
-					if (tmpMimeTarget.endsWith('/') || tmpMimeTarget.indexOf('.') < 0)
-					{
-						tmpMimeTarget = tmpDefaultFile;
-					}
-					this.setMimeHeader(tmpMimeTarget, pResponse);
-
+					// Let serve-static handle Content-Type detection.  It resolves
+					// the actual file path first (e.g. / → /index.html) and then
+					// sets the correct MIME type with charset.  Pre-setting the
+					// header here would prevent serve-static from overriding it
+					// because the underlying `send` library skips Content-Type
+					// when the header is already present.
 					const tmpServe = libServeStatic(servePath, Object.assign({ index: tmpDefaultFile }, pParams));
 					tmpServe(pRequest, pResponse, libFinalHandler(pRequest, pResponse));
 					// TODO: This may break things if a post request send handler is setup...

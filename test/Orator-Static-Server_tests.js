@@ -1310,6 +1310,175 @@ suite
 
 		suite
 		(
+			'MIME Type Resolution by serve-static',
+			() =>
+			{
+				test
+				(
+					'serve-static should set content-type with charset for HTML files',
+					(fDone) =>
+					{
+						let tmpPort = getNextTestPort();
+						let tmpHarness = createHarness(tmpPort);
+
+						startHarness(tmpHarness,
+							(pError) =>
+							{
+								tmpHarness.orator.addStaticRoute(_StaticContentPath, 'index.html', '/mime/*', '/mime/');
+
+								makeRequest(tmpPort, '/mime/index.html',
+									(pError, pStatusCode, pHeaders, pBody) =>
+									{
+										Expect(pError).to.equal(null);
+										Expect(pStatusCode).to.equal(200);
+										// serve-static sets charset on text types; a manual setMimeHeader would not
+										Expect(pHeaders['content-type']).to.equal('text/html; charset=UTF-8');
+										tmpHarness.orator.log.info(`HTML content-type with charset: ${pHeaders['content-type']}`);
+										tmpHarness.orator.stopService(
+											() =>
+											{
+												return fDone();
+											});
+									});
+							});
+					}
+				);
+
+				test
+				(
+					'serve-static should set content-type with charset for CSS files',
+					(fDone) =>
+					{
+						let tmpPort = getNextTestPort();
+						let tmpHarness = createHarness(tmpPort);
+
+						startHarness(tmpHarness,
+							(pError) =>
+							{
+								tmpHarness.orator.addStaticRoute(_StaticContentPath, 'index.html', '/mimecss/*', '/mimecss/');
+
+								makeRequest(tmpPort, '/mimecss/style.css',
+									(pError, pStatusCode, pHeaders, pBody) =>
+									{
+										Expect(pError).to.equal(null);
+										Expect(pStatusCode).to.equal(200);
+										// serve-static adds charset for text/* types
+										Expect(pHeaders['content-type']).to.equal('text/css; charset=UTF-8');
+										tmpHarness.orator.log.info(`CSS content-type with charset: ${pHeaders['content-type']}`);
+										tmpHarness.orator.stopService(
+											() =>
+											{
+												return fDone();
+											});
+									});
+							});
+					}
+				);
+
+				test
+				(
+					'directory request to / should get text/html from serve-static not application/octet-stream',
+					(fDone) =>
+					{
+						let tmpPort = getNextTestPort();
+						let tmpHarness = createHarness(tmpPort);
+
+						startHarness(tmpHarness,
+							(pError) =>
+							{
+								tmpHarness.orator.addStaticRoute(_StaticContentPath, 'index.html', '/*', '/');
+
+								makeRequest(tmpPort, '/',
+									(pError, pStatusCode, pHeaders, pBody) =>
+									{
+										Expect(pError).to.equal(null);
+										Expect(pStatusCode).to.equal(200);
+										// The core bug: mime.getType('/') returns null, falling back to
+										// application/octet-stream. serve-static resolves / to /index.html
+										// and correctly determines text/html with charset.
+										Expect(pHeaders['content-type']).to.equal('text/html; charset=UTF-8');
+										Expect(pHeaders['content-type']).to.not.contain('octet-stream');
+										Expect(pBody).to.contain('Test Index');
+										tmpHarness.orator.log.info(`Root / content-type: ${pHeaders['content-type']}`);
+										tmpHarness.orator.stopService(
+											() =>
+											{
+												return fDone();
+											});
+									});
+							});
+					}
+				);
+
+				test
+				(
+					'directory request to /subdir/ should get text/html from serve-static',
+					(fDone) =>
+					{
+						let tmpPort = getNextTestPort();
+						let tmpHarness = createHarness(tmpPort);
+
+						startHarness(tmpHarness,
+							(pError) =>
+							{
+								tmpHarness.orator.addStaticRoute(_StaticContentPath, 'index.html', '/app/*', '/app/');
+
+								makeRequest(tmpPort, '/app/subsite/',
+									(pError, pStatusCode, pHeaders, pBody) =>
+									{
+										Expect(pError).to.equal(null);
+										Expect(pStatusCode).to.equal(200);
+										// serve-static resolves /subsite/ to /subsite/index.html
+										Expect(pHeaders['content-type']).to.equal('text/html; charset=UTF-8');
+										Expect(pBody).to.contain('Subsite');
+										tmpHarness.orator.log.info(`Subdir / content-type: ${pHeaders['content-type']}`);
+										tmpHarness.orator.stopService(
+											() =>
+											{
+												return fDone();
+											});
+									});
+							});
+					}
+				);
+
+				test
+				(
+					'JSON file should get application/json content-type from serve-static',
+					(fDone) =>
+					{
+						let tmpPort = getNextTestPort();
+						let tmpHarness = createHarness(tmpPort);
+
+						startHarness(tmpHarness,
+							(pError) =>
+							{
+								tmpHarness.orator.addStaticRoute(_StaticContentPath, 'index.html', '/mj/*', '/mj/');
+
+								makeRequest(tmpPort, '/mj/data.json',
+									(pError, pStatusCode, pHeaders, pBody) =>
+									{
+										Expect(pError).to.equal(null);
+										Expect(pStatusCode).to.equal(200);
+										// JSON should not have charset added by serve-static
+										Expect(pHeaders['content-type']).to.contain('application/json');
+										let tmpParsed = JSON.parse(pBody);
+										Expect(tmpParsed.TestKey).to.equal('TestValue');
+										tmpHarness.orator.log.info(`JSON content-type: ${pHeaders['content-type']}`);
+										tmpHarness.orator.stopService(
+											() =>
+											{
+												return fDone();
+											});
+									});
+							});
+					}
+				);
+			}
+		);
+
+		suite
+		(
 			'addStaticRoute Parameter Defaults',
 			() =>
 			{
