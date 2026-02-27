@@ -4,10 +4,10 @@
     "description": "Static file serving for Orator API servers.",
     "main": "source/Orator-Static-Server.js",
     "scripts": {
-        "test": "npx mocha -u tdd --exit -R spec",
+        "test": "npx quack test",
         "coverage": "npx quack coverage",
         "start": "node debug/Harness.js",
-        "tests": "npx mocha -u tdd --exit -R spec --grep"
+        "tests": "npx quack test -g"
     },
     "mocha": {
         "diff": true,
