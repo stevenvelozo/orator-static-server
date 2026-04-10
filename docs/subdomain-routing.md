@@ -14,8 +14,8 @@ Split host: ["clienta", "example", "com"]
 First segment: "clienta"
     ↓
 Check: does ./sites/clienta/ exist?
-    ├── Yes → Serve from ./sites/clienta/page.html
-    └── No  → Serve from ./sites/page.html
+    ├── Yes -> Serve from ./sites/clienta/page.html
+    └── No  -> Serve from ./sites/page.html
 ```
 
 ## Setup
@@ -29,13 +29,13 @@ _Fable.Orator.addStaticRoute('./sites/');
 
 ```
 sites/
-├── index.html           ← Served for requests without subdomain match
+├── index.html           <- Served for requests without subdomain match
 ├── styles.css
 ├── clienta/
-│   ├── index.html       ← Served for clienta.example.com
+│   ├── index.html       <- Served for clienta.example.com
 │   └── styles.css
 ├── clientb/
-│   ├── index.html       ← Served for clientb.example.com
+│   ├── index.html       <- Served for clientb.example.com
 │   └── styles.css
 └── shared/
     └── logo.png
