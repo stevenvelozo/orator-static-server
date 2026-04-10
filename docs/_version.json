@@ -1,0 +1,7 @@
+{
+	"Name": "orator-static-server",
+	"Version": "2.0.4",
+	"Description": "Static file serving for Orator API servers.",
+	"GeneratedAt": "2026-04-10T01:50:05.106Z",
+	"GitCommit": "9e4f31a"
+}

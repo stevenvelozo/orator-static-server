@@ -1,4 +1,4 @@
-# Orator Static Server <small>1</small>
+# Orator Static Server
 
 > Static file serving for Orator API servers
 
