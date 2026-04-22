@@ -183,6 +183,127 @@ class OratorStaticServer extends libFableServiceProviderBase
 			});
 		return true;
 	}
+
+	/**
+	 * Like addStaticRoute, but any file listed in pFallbackMap that isn't
+	 * present on disk produces a 302 redirect to the mapped URL instead of
+	 * a 404. Useful for offering CDN fallbacks on runtime assets that are
+	 * optionally committed alongside the build output.
+	 *
+	 *   addStaticRouteWithFallbacks(
+	 *     './web-application/', null, '/pict/*', '/pict/', null,
+	 *     { 'pict.min.js': 'https://unpkg.com/pict/dist/pict.min.js' });
+	 *
+	 * Files present locally are served normally (MIME types, caching, etc.
+	 * all via serve-static). Files absent locally that ARE in the map are
+	 * redirected. Files absent locally that are NOT in the map 404 as usual.
+	 *
+	 * This variant does not use the service server's built-in serveStatic
+	 * plugin (e.g. restify.plugins.serveStatic) because that plugin does
+	 * not expose a "not found" hook; it always finalises the response.
+	 *
+	 * @param {string} pFilePath - The path on disk to serve files from.
+	 * @param {string} [pDefaultFile='index.html'] - The default file for directory requests.
+	 * @param {string} [pRoute='/*'] - The route pattern to match.
+	 * @param {string} [pRouteStrip='/'] - URL prefix to strip before filesystem lookup.
+	 * @param {object} [pParams={}] - Additional parameters passed to serve-static.
+	 * @param {Object<string,string>} [pFallbackMap={}] - Map of relative-path (under the route prefix) to absolute URL.
+	 * @returns {boolean} true if the route was successfully installed.
+	 */
+	addStaticRouteWithFallbacks(pFilePath, pDefaultFile, pRoute, pRouteStrip, pParams, pFallbackMap)
+	{
+		if (!this.fable.Orator)
+		{
+			this.log.error('OratorStaticServer requires an Orator instance to be registered with Fable.');
+			return false;
+		}
+		if (typeof(pFilePath) !== 'string')
+		{
+			this.fable.log.error('A file path must be passed in as part of the server.');
+			return false;
+		}
+
+		const tmpRoute = (typeof(pRoute) === 'undefined') ? '/*' : pRoute;
+		const tmpRouteStrip = (typeof(pRouteStrip) === 'undefined') ? '/' : pRouteStrip;
+		const tmpDefaultFile = (typeof(pDefaultFile) === 'undefined') ? 'index.html' : pDefaultFile;
+		const tmpFallbackMap = pFallbackMap || {};
+
+		let tmpOrator = this.fable.Orator;
+
+		this.fable.log.info('Orator mapping static+fallback route to files: '
+			+ tmpRoute + ' ==> ' + pFilePath + ' ' + tmpDefaultFile
+			+ ' (fallback entries: ' + Object.keys(tmpFallbackMap).length + ')');
+
+		if (!this.fable.FilePersistence)
+		{
+			this.fable.serviceManager.instantiateServiceProvider('FilePersistence');
+		}
+
+		tmpOrator.serviceServer.get(tmpRoute,
+			(pRequest, pResponse, fNext) =>
+			{
+					// Capture the relative path BEFORE the URL rewrite so we can
+					// look it up in the fallback map on a miss.
+					let tmpRelative = (pRequest.url || '').split('?')[0];
+					if (tmpRelative.indexOf(tmpRouteStrip) === 0)
+					{
+						tmpRelative = tmpRelative.slice(tmpRouteStrip.length);
+					}
+					try { tmpRelative = decodeURIComponent(tmpRelative); }
+					catch (pError) { /* non-fatal; will fall through to 404 */ }
+
+					// Magic subdomain subfolder check (mirrors addStaticRoute)
+					let tmpHostSet = pRequest.headers.host.split('.');
+					let tmpPotentialSubfolderMagicHost = false;
+					let servePath = pFilePath;
+					if (tmpHostSet.length > 1)
+					{
+						tmpPotentialSubfolderMagicHost = tmpHostSet[0];
+					}
+					if (tmpPotentialSubfolderMagicHost)
+					{
+						let tmpPotentialSubfolder = servePath + tmpPotentialSubfolderMagicHost;
+						if (this.fable.FilePersistence.libFS.existsSync(tmpPotentialSubfolder))
+						{
+							servePath = `${tmpPotentialSubfolder}/`;
+						}
+					}
+
+					pRequest.url = pRequest.url.split('?')[0].substr(tmpRouteStrip.length) || '/';
+					pRequest.path = function() { return pRequest.url; };
+
+					const tmpServe = libServeStatic(servePath, Object.assign({ index: tmpDefaultFile }, pParams));
+					tmpServe(pRequest, pResponse,
+						(pError) =>
+						{
+							// serve-static invokes this when it cannot serve a local
+							// file (missing, method not allowed, etc.). We get a
+							// chance to redirect before the default final handler
+							// would otherwise 404.
+							if (!pError && Object.prototype.hasOwnProperty.call(tmpFallbackMap, tmpRelative))
+							{
+								let tmpTarget = tmpFallbackMap[tmpRelative];
+								pResponse.statusCode = 302;
+								pResponse.setHeader('Location', tmpTarget);
+								pResponse.setHeader('Content-Type', 'text/plain; charset=utf-8');
+								pResponse.end('Redirecting to ' + tmpTarget + '\n');
+								return;
+							}
+							return libFinalHandler(pRequest, pResponse)(pError);
+						});
+			});
+
+		this.routes.push(
+			{
+				filePath: pFilePath,
+				defaultFile: tmpDefaultFile,
+				route: tmpRoute,
+				routeStrip: tmpRouteStrip,
+				params: pParams || {},
+				fallbackMap: tmpFallbackMap,
+			});
+		return true;
+	}
 }
 
 module.exports = OratorStaticServer;
