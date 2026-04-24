@@ -34,12 +34,17 @@ class OratorStaticServer extends libFableServiceProviderBase
 		this.routes = [];
 
 		// This is here because libMime has a breaking change from v1 to v2 and the lookup function was update to be getType per https://stackoverflow.com/a/60741078
-		// We don't want to introspect properties on this library every single time we need to check mime types.
-		// Therefore we are setting this boolean here and using it to branch.
+		// mime v4 additionally ships as ESM, so require() returns a module namespace object where getType lives on .default rather than the top level.
+		// We don't want to introspect properties on this library every single time we need to check mime types, so resolve the callable once here.
 		this.oldLibMime = false;
+		this.libMime = libMime;
 		if ('lookup' in libMime)
 		{
 			this.oldLibMime = true;
+		}
+		else if (libMime.default && typeof libMime.default.getType === 'function')
+		{
+			this.libMime = libMime.default;
 		}
 	}
 
@@ -55,11 +60,11 @@ class OratorStaticServer extends libFableServiceProviderBase
 
 		if (this.oldLibMime)
 		{
-			tmpHeader = libMime.lookup(pFileName);
+			tmpHeader = this.libMime.lookup(pFileName);
 		}
 		else
 		{
-			tmpHeader = libMime.getType(pFileName);
+			tmpHeader = this.libMime.getType(pFileName);
 		}
 
 		if (!tmpHeader)
